@@ -1,6 +1,13 @@
 const User = require('../models/user');
+const jwt = require('jwt-simple');
+const config = require('../config');
 
-exports.signup = (req, res, next) => {
+function tokenForUser(user) {
+    const timestamp = new Date().getTime();
+    return jwt.encode({ sub: user.id, iat: timestamp }, config.secret);
+}
+
+exports.signup = function(req, res, next) {
     const email = req.body.email;
     const password = req.body.password;
     
@@ -8,7 +15,7 @@ exports.signup = (req, res, next) => {
         return res.status(422).send({ error: 'You must provide email and password' });
     }
 
-    User.findOne({ email: email }, (err, existingUser) => {
+    User.findOne({ email: email }, function(err, existingUser){
         // see if user exists
         if(err) { return next(err); }
 
@@ -26,13 +33,17 @@ exports.signup = (req, res, next) => {
             if(err) { return next(err); }
 
             // respond to request indicating user created 
-            res.json( { success: true });
+            res.json( { token: tokenForUser(user) });
         });
 
     })
 }
 
-exports.fetchUsers = async (req, res, next) => {
+exports.signin = function(req, res, next) {
+    res.send({token: tokenForUser(req.user)})
+}
+
+exports.fetchUsers = async function(req, res, next) {
   let users;
   try {
      users = await User.find()
@@ -42,7 +53,7 @@ exports.fetchUsers = async (req, res, next) => {
     res.json({ users: users.map(user => user.email)})
 }
 
-exports.updateUser = async (req, res, next) => {
+exports.updateUser = async function(req, res, next) {
     const email = req.body.email;
     const _id = req.params.id;
     console.log(_id);
@@ -65,7 +76,7 @@ exports.updateUser = async (req, res, next) => {
     res.json({ user: user.email})
 }
 
-exports.deleteUser = async (req, res, next) => {
+exports.deleteUser = async function(req, res, next){
     const _id = req.params.id
     let user;
     try {
